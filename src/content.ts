@@ -3,7 +3,7 @@ console.info('Content script loaded');
 let isUsersChannel = false;
 let messagesLength = 0;
 
-const readMessage = (message: string) => {
+const readMessage = (message: string, maxDuration: number) => {
 	const synth = window.speechSynthesis;
 
 	const voices = synth.getVoices();
@@ -17,6 +17,10 @@ const readMessage = (message: string) => {
 	const utterThis = new SpeechSynthesisUtterance(message);
 	utterThis.voice = filteredVoices[0];
 	synth.speak(utterThis);
+
+	setTimeout(() => {
+		synth.cancel();
+	}, maxDuration * 1000);
 };
 
 chrome.storage.local.get(['userSettings'], (result) => {
@@ -44,7 +48,11 @@ const interval = setInterval(() => {
 		return;
 	}
 
-	const chatMessageElements = document.querySelectorAll('.chat-line__message');
+	const chatElement = document.querySelector(
+		'div[data-test-selector=chat-scrollable-area__message-container]'
+	);
+
+	const chatMessageElements = chatElement?.children ?? [];
 
 	if (!chatMessageElements.length) {
 		return;
@@ -62,13 +70,23 @@ const interval = setInterval(() => {
 		return;
 	}
 
+	if (lastMessage.textContent?.includes('AutoMod')) {
+		return;
+	}
+
 	const lastMessageWriter = lastMessage.querySelector('.chat-line__username')?.textContent;
 
 	const lastMessageText = lastMessage.querySelector(
 		'span[data-a-target=chat-message-text]'
 	)?.textContent;
 
-	readMessage(`${lastMessageWriter} dice: ${lastMessageText}`);
+	const redeemMessage = lastMessage?.textContent ?? '';
+
+	const messageToRead = lastMessageWriter
+		? `${lastMessageWriter} dice: ${lastMessageText}`
+		: redeemMessage;
+
+	readMessage(messageToRead, 15);
 
 	messagesLength = chatMessages.length;
 }, 1000);

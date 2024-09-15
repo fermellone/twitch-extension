@@ -4,7 +4,12 @@
 	"version": "1.0",
 	"description": "Twitch plugins",
 	"action": {
-		"default_popup": "index.html"
+		"default_popup": "index.html",
+		"default_icon": {
+			"16": "images/logo.png",
+			"48": "images/logo.png",
+			"128": "images/logo.png"
+		}
 	},
 	"permissions": ["activeTab", "storage"],
 	"content_scripts": [

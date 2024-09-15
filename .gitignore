@@ -22,3 +22,7 @@ vite.config.ts.timestamp-*
 
 # Lock files
 pnpm-lock.yaml
+
+# Extension files
+*.pem
+*.crx

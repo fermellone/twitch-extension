@@ -51,70 +51,55 @@ const asyncInterval = async (callback: () => Promise<void>, ms: number) => {
 	processTimeout = setTimeout(() => asyncInterval(callback, ms), ms);
 };
 
-asyncInterval(async () => {
-	const domIsReady = document.querySelector(
-		'div[data-test-selector=channel_panels_toggle_selector]'
-	);
+const processChat = async () => {
+	if (
+		!isUsersChannel ||
+		!document.querySelector('div[data-test-selector=channel_panels_toggle_selector]')
+	) {
+		return;
+	}
 
 	const synth = window.speechSynthesis;
-
-	const voices = synth.getVoices();
-
-	const voicesAreReady = voices.length > 0;
-
-	if (!isUsersChannel || !domIsReady || !voicesAreReady) {
+	if (synth.getVoices().length === 0) {
 		return;
 	}
 
-	const chatElement = document.querySelector(
+	const chatElement = document.querySelector<HTMLElement>(
 		'div[data-test-selector=chat-scrollable-area__message-container]'
 	);
-
-	const chatMessageElements = chatElement?.children ?? [];
-
-	if (!chatMessageElements.length) {
+	if (!chatElement?.children.length) {
 		return;
 	}
 
-	const chatMessages = Array.from(chatMessageElements);
-
-	if (chatMessages.length === messagesLength) {
+	const chatMessages = Array.from(chatElement.children);
+	if (chatMessages.length <= messagesLength) {
 		return;
 	}
 
-	const lastMessage = chatMessages[chatMessages.length - 1];
-
-	if (!lastMessage) {
-		return;
-	}
-
-	const isAutomodMessage = lastMessage.textContent?.includes('AutoMod');
-
-	const isWelcomeMessage = lastMessage.getAttribute('data-a-target') === 'chat-welcome-message';
-
-	if (isAutomodMessage || isWelcomeMessage) {
+	const lastMessage = chatMessages[chatMessages.length - 1] as HTMLElement;
+	if (
+		lastMessage.textContent?.includes('AutoMod') ||
+		lastMessage.getAttribute('data-a-target') === 'chat-welcome-message'
+	) {
 		return;
 	}
 
 	const lastMessageWriter = lastMessage.querySelector('.chat-line__username')?.textContent;
-
 	const lastMessageText = lastMessage.querySelector(
 		'span[data-a-target=chat-message-text]'
 	)?.textContent;
-
-	const redeemMessage = lastMessage?.textContent ?? '';
-
 	const isARedeemMessage = lastMessage.getAttribute('data-test-selector') === 'user-notice-line';
 
 	const messageToRead = isARedeemMessage
-		? redeemMessage
+		? lastMessage.textContent || ''
 		: `${lastMessageWriter} dice: ${lastMessageText}`;
 
 	await readMessage(messageToRead, 15);
-
 	messagesLength = chatMessages.length;
-}, 1000);
-
-window.onbeforeunload = () => {
-	clearTimeout(processTimeout);
 };
+
+asyncInterval(processChat, 1000);
+
+window.addEventListener('beforeunload', () => {
+	clearTimeout(processTimeout);
+});

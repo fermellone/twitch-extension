@@ -1,14 +1,12 @@
-console.log('Content script loaded');
+console.info('Content script loaded');
 
 let isUsersChannel = false;
 let messagesLength = 0;
 
-const readMessage = async (message: string) => {
+const readMessage = (message: string) => {
 	const synth = window.speechSynthesis;
 
-	const voices = await synth.getVoices();
-
-	console.log('voices', voices);
+	const voices = synth.getVoices();
 
 	let filteredVoices = voices.filter((v) => v.lang.includes('es-PY'));
 
@@ -17,13 +15,11 @@ const readMessage = async (message: string) => {
 		: voices.filter((v) => v.lang.includes('es'));
 
 	const utterThis = new SpeechSynthesisUtterance(message);
-	console.log('filtered voices', filteredVoices);
 	utterThis.voice = filteredVoices[0];
 	synth.speak(utterThis);
 };
 
 chrome.storage.local.get(['userSettings'], (result) => {
-	console.log('userSettings', result);
 	const userSettings = result.userSettings;
 
 	if (!userSettings) {
@@ -33,12 +29,18 @@ chrome.storage.local.get(['userSettings'], (result) => {
 	isUsersChannel = window.location.href.includes(userSettings.channelName);
 });
 
-const interval = setInterval(async () => {
+const interval = setInterval(() => {
 	const domIsReady = document.querySelector(
 		'div[data-test-selector=channel_panels_toggle_selector]'
 	);
 
-	if (!isUsersChannel || !domIsReady) {
+	const synth = window.speechSynthesis;
+
+	const voices = synth.getVoices();
+
+	const voicesAreReady = voices.length > 0;
+
+	if (!isUsersChannel || !domIsReady || !voicesAreReady) {
 		return;
 	}
 
@@ -66,7 +68,7 @@ const interval = setInterval(async () => {
 		'span[data-a-target=chat-message-text]'
 	)?.textContent;
 
-	await readMessage(`${lastMessageWriter} dice: ${lastMessageText}`);
+	readMessage(`${lastMessageWriter} dice: ${lastMessageText}`);
 
 	messagesLength = chatMessages.length;
 }, 1000);

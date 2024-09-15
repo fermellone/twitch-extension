@@ -1,3 +1,6 @@
+import type { Plugin } from '$lib/types';
+import { getFromStorage } from '$lib/utils';
+
 console.info('Content script loaded');
 
 let isUsersChannel = false;
@@ -95,7 +98,14 @@ const processChat = async () => {
 		? lastMessage.textContent || ''
 		: `${lastMessageWriter} dice: ${lastMessageText}`;
 
-	await readMessage(messageToRead, 15);
+	const plugins = await getFromStorage<Plugin[]>('plugins');
+
+	const ttsPlugin = plugins.find((plugin) => plugin.name === 'TTS');
+
+	if (ttsPlugin && ttsPlugin.enabled) {
+		await readMessage(messageToRead, 15);
+	}
+
 	messagesLength = chatMessages.length;
 };
 

@@ -1,19 +1,5 @@
-<script>
-	import { onMount } from 'svelte';
-
-	let channelName = '';
-
-	const saveChannelName = () => {
-		chrome.storage.local.set({ channelName });
-	};
-
-	onMount(() => {
-		chrome.storage.local.get(['channelName'], (result) => {
-			channelName = result.channelName;
-		});
-	});
+<script lang="ts">
+	import UserSettings from '$lib/components/UserSettings.svelte';
 </script>
 
-<input type="text" bind:value={channelName} />
-
-<button on:click={saveChannelName}>Save</button>
+<UserSettings />

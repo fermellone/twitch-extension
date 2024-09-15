@@ -3,7 +3,7 @@ console.info('Content script loaded');
 let isUsersChannel = false;
 let messagesLength = 0;
 
-const readMessage = (message: string, maxDuration: number) => {
+const readMessage = async (message: string, maxDuration: number) => {
 	const synth = window.speechSynthesis;
 
 	const voices = synth.getVoices();
@@ -16,11 +16,22 @@ const readMessage = (message: string, maxDuration: number) => {
 
 	const utterThis = new SpeechSynthesisUtterance(message);
 	utterThis.voice = filteredVoices[0];
+
 	synth.speak(utterThis);
 
-	setTimeout(() => {
-		synth.cancel();
-	}, maxDuration * 1000);
+	let second = 0;
+
+	await new Promise((resolve) => {
+		const interval = setInterval(() => {
+			second++;
+
+			if (second >= maxDuration) {
+				synth.cancel();
+				clearInterval(interval);
+				resolve(null);
+			}
+		}, 1000);
+	});
 };
 
 chrome.storage.local.get(['userSettings'], (result) => {
@@ -33,7 +44,14 @@ chrome.storage.local.get(['userSettings'], (result) => {
 	isUsersChannel = window.location.href.includes(userSettings.channelName);
 });
 
-const interval = setInterval(() => {
+let processTimeout: NodeJS.Timeout;
+
+const asyncInterval = async (callback: () => Promise<void>, ms: number) => {
+	await callback();
+	processTimeout = setTimeout(() => asyncInterval(callback, ms), ms);
+};
+
+asyncInterval(async () => {
 	const domIsReady = document.querySelector(
 		'div[data-test-selector=channel_panels_toggle_selector]'
 	);
@@ -70,7 +88,11 @@ const interval = setInterval(() => {
 		return;
 	}
 
-	if (lastMessage.textContent?.includes('AutoMod')) {
+	const isAutomodMessage = lastMessage.textContent?.includes('AutoMod');
+
+	const isWelcomeMessage = lastMessage.getAttribute('data-a-target') === 'chat-welcome-message';
+
+	if (isAutomodMessage || isWelcomeMessage) {
 		return;
 	}
 
@@ -82,15 +104,17 @@ const interval = setInterval(() => {
 
 	const redeemMessage = lastMessage?.textContent ?? '';
 
-	const messageToRead = lastMessageWriter
-		? `${lastMessageWriter} dice: ${lastMessageText}`
-		: redeemMessage;
+	const isARedeemMessage = lastMessage.getAttribute('data-test-selector') === 'user-notice-line';
 
-	readMessage(messageToRead, 15);
+	const messageToRead = isARedeemMessage
+		? redeemMessage
+		: `${lastMessageWriter} dice: ${lastMessageText}`;
+
+	await readMessage(messageToRead, 15);
 
 	messagesLength = chatMessages.length;
 }, 1000);
 
 window.onbeforeunload = () => {
-	clearInterval(interval);
+	clearTimeout(processTimeout);
 };

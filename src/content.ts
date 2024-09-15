@@ -67,6 +67,7 @@ const processChat = async () => {
 	const chatElement = document.querySelector<HTMLElement>(
 		'div[data-test-selector=chat-scrollable-area__message-container]'
 	);
+
 	if (!chatElement?.children.length) {
 		return;
 	}
